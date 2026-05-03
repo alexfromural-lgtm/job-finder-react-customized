@@ -19,7 +19,7 @@ A fully functional React 19 + TypeScript + TailwindCSS v4 frontend connected to 
 ![Login Page](./doc/assets/FE_login_page.png)
 
 ### Signup Page (Tab-based role selector)
-![Signup Page](.doc/assets/FE_signup_page.png)
+![Signup Page](./doc/assets/FE_signup_page.png)
 
 ---
 

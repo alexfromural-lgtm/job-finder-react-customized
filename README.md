@@ -15,8 +15,11 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 ### Signup Page (tab-based role selector)
 ![Signup Page](./doc/assets/FE_signup_page.png)
 
-### Job List (after login)
+### Job List (after login as Admin)
 ![Job List](./doc/assets/FE_job_page_login_admin.png)
+
+### Job List (after login as Recruiter)
+![Job List](./doc/assets/FE_recruiter_page.png)
 
 ---
 

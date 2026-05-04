@@ -5,7 +5,7 @@ import { Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, hasRole } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +22,14 @@ export default function LoginPage() {
     setError('');
     try {
       await login(email, password);
-      navigate('/');
+      // Redirect to the role-specific dashboard
+      if (hasRole('RECRUITER')) {
+        navigate('/dashboard/recruiter');
+      } else if (hasRole('JOB_SEEKER')) {
+        navigate('/dashboard/seeker');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err?.response?.data?.error ?? 'Invalid email or password.');
     } finally {

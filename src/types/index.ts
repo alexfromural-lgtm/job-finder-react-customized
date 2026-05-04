@@ -48,7 +48,12 @@ export interface Job {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  recruiter?: RecruiterProfile;
+  /** Partial recruiter info returned by the API (not the full RecruiterProfile) */
+  recruiter?: {
+    companyName: string;
+    industry?: string;
+    companyWebsite?: string;
+  };
 }
 
 export interface Application {

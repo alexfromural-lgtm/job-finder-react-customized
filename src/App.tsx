@@ -8,6 +8,8 @@ import SignupPage from './pages/SignupPage';
 import JobDetailPage from './pages/JobDetailPage';
 import JobSeekerDashboard from './pages/jobseeker/DashboardPage';
 import RecruiterDashboard from './pages/recruiter/DashboardPage';
+import RecruiterProfilePage from './pages/recruiter/ProfilePage';
+import JobSeekerProfilePage from './pages/jobseeker/ProfilePage';
 
 function App() {
   return (
@@ -36,6 +38,26 @@ function App() {
           element={
             <ProtectedRoute requiredRole="RECRUITER">
               <RecruiterDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected: Recruiter Profile */}
+        <Route
+          path="/profile/recruiter"
+          element={
+            <ProtectedRoute requiredRole="RECRUITER">
+              <RecruiterProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected: Job Seeker Profile */}
+        <Route
+          path="/profile/seeker"
+          element={
+            <ProtectedRoute requiredRole="JOB_SEEKER">
+              <JobSeekerProfilePage />
             </ProtectedRoute>
           }
         />

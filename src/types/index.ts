@@ -25,6 +25,8 @@ export interface JobSeekerProfile {
   education?: string;
   experience?: string;
   resumeUrl?: string;
+  /** Included by the backend in GET /jobseeker/profile responses */
+  user?: Pick<User, 'id' | 'name' | 'email'>;
 }
 
 export interface RecruiterProfile {
@@ -34,6 +36,8 @@ export interface RecruiterProfile {
   companyWebsite?: string;
   description?: string;
   industry?: string;
+  /** Included by the backend in GET /recruiter/profile responses */
+  user?: Pick<User, 'id' | 'name' | 'email'>;
 }
 
 export interface Job {

@@ -30,6 +30,9 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 ### Job List Job Seeker Profile (scroll down)
 ![Job List](./doc/assets/FE_seeker_profile_page_continue.png)
 
+### Job Seeker - My Applications
+![Job List](./doc/assets/FE_Apply_and_My_Applications_route.png)
+
 
 ---
 

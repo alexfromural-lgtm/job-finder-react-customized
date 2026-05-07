@@ -68,6 +68,15 @@ export interface Application {
   status: ApplicationStatus;
   createdAt: string;
   updatedAt: string;
+  /** Populated by GET /jobseeker/applications */
+  job?: {
+    id: string;
+    title: string;
+    location: string;
+    salaryRange?: string;
+    category?: string;
+    recruiter?: { companyName: string };
+  };
 }
 
 // ─── API Request/Response Types ───────────────────────────────────────────────

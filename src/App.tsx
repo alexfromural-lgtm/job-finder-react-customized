@@ -10,6 +10,7 @@ import JobSeekerDashboard from './pages/jobseeker/DashboardPage';
 import RecruiterDashboard from './pages/recruiter/DashboardPage';
 import RecruiterProfilePage from './pages/recruiter/ProfilePage';
 import JobSeekerProfilePage from './pages/jobseeker/ProfilePage';
+import ApplicationsPage from './pages/jobseeker/ApplicationsPage';
 
 function App() {
   return (
@@ -28,6 +29,16 @@ function App() {
           element={
             <ProtectedRoute requiredRole="JOB_SEEKER">
               <JobSeekerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected: Job Seeker Applications */}
+        <Route
+          path="/dashboard/seeker/applications"
+          element={
+            <ProtectedRoute requiredRole="JOB_SEEKER">
+              <ApplicationsPage />
             </ProtectedRoute>
           }
         />

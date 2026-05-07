@@ -4,7 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import * as JobsApi from '../../api/jobs.api';
 import type { Job } from '../../types';
 import JobList from '../../components/jobs/JobList';
+import Pagination from '../../components/ui/Pagination';
 import Button from '../../components/ui/Button';
+import { usePaginatedJobs } from '../../hooks/usePaginatedJobs';
 
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
@@ -12,7 +14,6 @@ export default function JobSeekerDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     JobsApi.getAllJobs()
@@ -21,13 +22,13 @@ export default function JobSeekerDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = search.trim()
-    ? jobs.filter(
-        (j) =>
-          j.title.toLowerCase().includes(search.toLowerCase()) ||
-          j.location.toLowerCase().includes(search.toLowerCase())
-      )
-    : jobs;
+  const {
+    search,
+    currentPage, pageSize, totalPages, scrollMode,
+    filteredJobs, pageItems, hasMore, loadingMore,
+    setSearch,
+    goToPage, setPageSize, setScrollMode, loadMore,
+  } = usePaginatedJobs({ allJobs: jobs, defaultPageSize: 10, enableCategory: false });
 
   return (
     <div className="page hero-gradient">
@@ -36,15 +37,9 @@ export default function JobSeekerDashboard() {
         <div
           className="glass-strong"
           style={{
-            borderRadius: 'var(--radius-xl)',
-            padding: '2rem',
-            marginBottom: '2rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            animation: 'slideUp 0.3s ease',
+            borderRadius: 'var(--radius-xl)', padding: '2rem', marginBottom: '2rem',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexWrap: 'wrap', gap: '1rem', animation: 'slideUp 0.3s ease',
           }}
         >
           <div>
@@ -56,10 +51,7 @@ export default function JobSeekerDashboard() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <div
-              className="glass"
-              style={{ padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}
-            >
+            <div className="glass" style={{ padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
                 {jobs.filter((j) => j.isActive).length}
               </div>
@@ -68,16 +60,12 @@ export default function JobSeekerDashboard() {
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search bar */}
         <div
           className="glass"
           style={{
-            display: 'flex',
-            gap: '1rem',
-            padding: '1rem 1.5rem',
-            borderRadius: 'var(--radius-lg)',
-            marginBottom: '1.5rem',
-            alignItems: 'center',
+            display: 'flex', gap: '1rem', padding: '1rem 1.5rem',
+            borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem', alignItems: 'center',
           }}
         >
           <input
@@ -98,7 +86,7 @@ export default function JobSeekerDashboard() {
         {/* Heading */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
-            {loading ? 'Loading jobs...' : `${filtered.length} Available Job${filtered.length !== 1 ? 's' : ''}`}
+            {loading ? 'Loading jobs…' : `${filteredJobs.length} Available Job${filteredJobs.length !== 1 ? 's' : ''}`}
           </h2>
           <Button id="browse-all-btn" variant="ghost" size="sm" onClick={() => navigate('/')}>
             Browse All →
@@ -107,7 +95,27 @@ export default function JobSeekerDashboard() {
 
         {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-        <JobList jobs={filtered} loading={loading} emptyMessage="No jobs match your search." />
+        <JobList
+          jobs={pageItems}
+          loading={loading}
+          emptyMessage="No jobs match your search."
+          onLoadMore={scrollMode ? loadMore : undefined}
+          loadingMore={loadingMore}
+        />
+
+        {!loading && filteredJobs.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            scrollMode={scrollMode}
+            totalItems={filteredJobs.length}
+            hasMore={hasMore}
+            onPageChange={goToPage}
+            onPageSizeChange={setPageSize}
+            onScrollModeToggle={setScrollMode}
+          />
+        )}
       </div>
     </div>
   );

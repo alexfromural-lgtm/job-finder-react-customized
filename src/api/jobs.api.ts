@@ -1,6 +1,30 @@
 import axiosClient from './axiosClient';
 import type { Job, JobFormData } from '../types';
 
+export interface JobSearchParams {
+  search?: string;
+  category?: string;
+  location?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface JobsMeta {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/** Server-side search + pagination — hits GET /api/jobs/all with query params */
+export const searchJobs = async (
+  params?: JobSearchParams,
+): Promise<{ jobs: Job[]; meta: JobsMeta }> => {
+  const res = await axiosClient.get<{ data: Job[]; meta: JobsMeta }>('/jobs/all', { params });
+  return { jobs: res.data.data, meta: res.data.meta };
+};
+
+/** Kept for backward-compat (DashboardPage client-side filtering) */
 export const getAllJobs = async (): Promise<Job[]> => {
   const res = await axiosClient.get<{ data: Job[] }>('/jobs/all');
   return res.data.data;

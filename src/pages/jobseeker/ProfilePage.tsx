@@ -163,14 +163,19 @@ export default function JobSeekerProfilePage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    getJobSeekerProfile()
+    const controller = new AbortController();
+    getJobSeekerProfile(controller.signal)
       .then((p) => {
         setProfile(p);
         setForm(p);
         setSkills(p.skills ?? []);
       })
-      .catch(() => setError('Failed to load profile. Please try again.'))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        setError('Failed to load profile. Please try again.');
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   const handleChange = (name: string, value: string) => {

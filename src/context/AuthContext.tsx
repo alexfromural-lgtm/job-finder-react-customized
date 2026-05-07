@@ -27,13 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
-  const fetchUser = useCallback(async (token: string) => {
+  const fetchUser = useCallback(async (token: string, signal?: AbortSignal) => {
     try {
       localStorage.setItem('accessToken', token);
       setAccessToken(token);
-      const me = await AuthApi.getMe();
+      const me = await AuthApi.getMe(signal);
       setUser(me);
-    } catch {
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === 'ERR_CANCELED') return; // aborted — ignore
       localStorage.removeItem('accessToken');
       setAccessToken(null);
       setUser(null);
@@ -68,11 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // On mount: if we have a stored token, try to restore the session
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (token) {
-      fetchUser(token).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
+    if (!token) { setIsLoading(false); return; }
+    const controller = new AbortController();
+    fetchUser(token, controller.signal).finally(() => setIsLoading(false));
+    return () => controller.abort();
   }, [fetchUser]);
 
   // Listen for 401 events from the axios interceptor

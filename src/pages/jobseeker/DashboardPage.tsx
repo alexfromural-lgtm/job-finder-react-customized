@@ -16,10 +16,15 @@ export default function JobSeekerDashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    JobsApi.getAllJobs()
+    const controller = new AbortController();
+    JobsApi.getAllJobs(controller.signal)
       .then(setJobs)
-      .catch(() => setError('Failed to load jobs.'))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        setError('Failed to load jobs.');
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   const {

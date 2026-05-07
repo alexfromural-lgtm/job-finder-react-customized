@@ -26,8 +26,8 @@ export const searchJobs = async (
 };
 
 /** Kept for backward-compat (DashboardPage client-side filtering) */
-export const getAllJobs = async (): Promise<Job[]> => {
-  const res = await axiosClient.get<{ data: Job[] }>('/jobs/all');
+export const getAllJobs = async (signal?: AbortSignal): Promise<Job[]> => {
+  const res = await axiosClient.get<{ data: Job[] }>('/jobs/all', { signal });
   return res.data.data;
 };
 
@@ -36,8 +36,8 @@ export const getJobById = async (id: string, signal?: AbortSignal): Promise<Job>
   return res.data.data;
 };
 
-export const getRecruiterJobs = async (): Promise<Job[]> => {
-  const res = await axiosClient.get<{ data: Job[] }>('/jobs/recruiter');
+export const getRecruiterJobs = async (signal?: AbortSignal): Promise<Job[]> => {
+  const res = await axiosClient.get<{ data: Job[] }>('/jobs/recruiter', { signal });
   return res.data.data;
 };
 

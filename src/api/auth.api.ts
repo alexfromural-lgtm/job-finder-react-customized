@@ -26,7 +26,7 @@ export const logout = async (): Promise<void> => {
   await axiosClient.post('/auth/logout');
 };
 
-export const getMe = async (): Promise<User> => {
-  const res = await axiosClient.get<{ user: User }>('/auth/me');
+export const getMe = async (signal?: AbortSignal): Promise<User> => {
+  const res = await axiosClient.get<{ user: User }>('/auth/me', { signal });
   return res.data.user;
 };

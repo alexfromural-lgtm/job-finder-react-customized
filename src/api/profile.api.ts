@@ -4,8 +4,8 @@ import type { RecruiterProfile, JobSeekerProfile } from '../types';
 // ─── Recruiter Profile ────────────────────────────────────────────────────────
 // Response shape: { data: RecruiterProfile }
 
-export const getRecruiterProfile = async (): Promise<RecruiterProfile> => {
-  const res = await axiosClient.get<{ data: RecruiterProfile }>('/recruiter/profile');
+export const getRecruiterProfile = async (signal?: AbortSignal): Promise<RecruiterProfile> => {
+  const res = await axiosClient.get<{ data: RecruiterProfile }>('/recruiter/profile', { signal });
   return res.data.data;
 };
 
@@ -19,8 +19,8 @@ export const updateRecruiterProfile = async (
 // ─── Job Seeker Profile ───────────────────────────────────────────────────────
 // Response shape: { profile: JobSeekerProfile }
 
-export const getJobSeekerProfile = async (): Promise<JobSeekerProfile> => {
-  const res = await axiosClient.get<{ profile: JobSeekerProfile }>('/jobseeker/profile');
+export const getJobSeekerProfile = async (signal?: AbortSignal): Promise<JobSeekerProfile> => {
+  const res = await axiosClient.get<{ profile: JobSeekerProfile }>('/jobseeker/profile', { signal });
   return res.data.profile;
 };
 

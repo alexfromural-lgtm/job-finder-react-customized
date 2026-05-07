@@ -21,19 +21,24 @@ export default function RecruiterDashboard() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const data = await JobsApi.getRecruiterJobs();
+      const data = await JobsApi.getRecruiterJobs(signal);
       setJobs(data);
-    } catch {
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === 'ERR_CANCELED') return;
       setError('Failed to load your job postings.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchJobs(controller.signal);
+    return () => controller.abort();
+  }, [fetchJobs]);
 
   const flash = (msg: string) => {
     setSuccessMsg(msg);

@@ -69,13 +69,18 @@ export default function RecruiterProfilePage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    getRecruiterProfile()
+    const controller = new AbortController();
+    getRecruiterProfile(controller.signal)
       .then((p) => {
         setProfile(p);
         setForm(p);
       })
-      .catch(() => setError('Failed to load profile. Please try again.'))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        setError('Failed to load profile. Please try again.');
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   const handleChange = (name: string, value: string) => {

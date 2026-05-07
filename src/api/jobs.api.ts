@@ -19,8 +19,9 @@ export interface JobsMeta {
 /** Server-side search + pagination — hits GET /api/jobs/all with query params */
 export const searchJobs = async (
   params?: JobSearchParams,
+  signal?: AbortSignal,
 ): Promise<{ jobs: Job[]; meta: JobsMeta }> => {
-  const res = await axiosClient.get<{ data: Job[]; meta: JobsMeta }>('/jobs/all', { params });
+  const res = await axiosClient.get<{ data: Job[]; meta: JobsMeta }>('/jobs/all', { params, signal });
   return { jobs: res.data.data, meta: res.data.meta };
 };
 

@@ -50,13 +50,17 @@ export default function LandingPage() {
 
   // ── Main data fetch — fires every time params change ──────────────────────
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    JobsApi.searchJobs({
-      search: debouncedSearch || undefined,
-      category: categoryFilter || undefined,
-      page,
-      pageSize,
-    })
+    JobsApi.searchJobs(
+      {
+        search: debouncedSearch || undefined,
+        category: categoryFilter || undefined,
+        page,
+        pageSize,
+      },
+      controller.signal,
+    )
       .then(({ jobs: newJobs, meta: newMeta }) => {
         setJobs(newJobs);
         setMeta(newMeta);
@@ -68,8 +72,15 @@ export default function LandingPage() {
           setCategories(Array.from(new Set(newJobs.map((j) => j.category).filter(Boolean))) as string[]);
         }
       })
-      .catch(() => setError('Could not load jobs. Make sure the backend is running.'))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        // Ignore aborts (StrictMode cleanup or filter change mid-flight)
+        if (err?.name === 'CanceledError' || err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') return;
+        setError('Could not load jobs. Make sure the backend is running.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [debouncedSearch, categoryFilter, page, pageSize]); // scrollMode excluded intentionally
 
   // ── URL persistence ────────────────────────────────────────────────────────

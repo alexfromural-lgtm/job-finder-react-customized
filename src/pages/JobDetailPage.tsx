@@ -29,10 +29,15 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    JobsApi.getJobById(id)
+    const controller = new AbortController();
+    JobsApi.getJobById(id, controller.signal)
       .then(setJob)
-      .catch(() => setError('Job not found or unavailable.'))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return; // aborted — ignore
+        setError('Job not found or unavailable.');
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, [id]);
 
   if (loading) {

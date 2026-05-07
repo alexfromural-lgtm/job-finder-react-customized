@@ -31,8 +31,8 @@ export const getAllJobs = async (): Promise<Job[]> => {
   return res.data.data;
 };
 
-export const getJobById = async (id: string): Promise<Job> => {
-  const res = await axiosClient.get<{ data: Job }>(`/jobs/${id}`);
+export const getJobById = async (id: string, signal?: AbortSignal): Promise<Job> => {
+  const res = await axiosClient.get<{ data: Job }>(`/jobs/${id}`, { signal });
   return res.data.data;
 };
 

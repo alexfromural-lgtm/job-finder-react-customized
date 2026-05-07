@@ -21,6 +21,9 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 ### Job List (after login as Recruiter)
 ![Job List](./doc/assets/FE_recruiter_page.png)
 
+### Job List (after login as JobSeeker)
+![Job List](./doc/assets/FE_job_page_jobseeker.png)
+
 ### Recruiter Profile
 ![Recruiter Profile](./doc/assets/FE_recruiter_profile_page.png)
 

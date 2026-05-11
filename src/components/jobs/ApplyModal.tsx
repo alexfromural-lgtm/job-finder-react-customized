@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { applyToJob } from '../../api/applications.api';
+import { pollUntilDone } from '../../api/queue.api';
 import Button from '../ui/Button';
 
 interface Props {
@@ -16,6 +17,14 @@ export default function ApplyModal({ jobId, jobTitle, companyName, onSuccess, on
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Holds the AbortController for the current in-flight poll so we can
+  // cancel it when the modal closes or the component unmounts.
+  const pollAbortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight poll on unmount
+  useEffect(() => {
+    return () => { pollAbortRef.current?.abort(); };
+  }, []);
 
   // Focus textarea on open
   useEffect(() => {
@@ -36,16 +45,32 @@ export default function ApplyModal({ jobId, jobTitle, companyName, onSuccess, on
     setLoading(true);
     setErrorMsg('');
     try {
-      const application = await applyToJob(jobId, coverLetter.trim() || undefined);
+      // Step 1: enqueue the write — backend returns 202 immediately
+      const { jobId: queueJobId } = await applyToJob(jobId, coverLetter.trim() || undefined);
+      setSuccessMsg('⏳ Processing your application…');
+
+      // Step 2: poll until the worker finishes the DB write
+      const controller = new AbortController();
+      pollAbortRef.current = controller;
+      const finished = await pollUntilDone(queueJobId, 600, 30_000, controller.signal);
+      pollAbortRef.current = null;
+
+      // finished.result is the Application object returned by the service
+      const application = finished.result as { id: string };
       setSuccessMsg('🎉 Application submitted!');
       setTimeout(() => onSuccess(application.id), 1200);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { error?: string }; status?: number } };
-      if (axiosErr?.response?.status === 409) {
-        setErrorMsg('You have already applied to this job.');
-      } else {
-        setErrorMsg(axiosErr?.response?.data?.error ?? 'Something went wrong. Please try again.');
-      }
+      // Silently ignore aborts (modal closed / component unmounted)
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+            ?? 'Something went wrong. Please try again.';
+
+      setErrorMsg(message);
+      setSuccessMsg(''); // clear the "processing" state if we showed it
       setLoading(false);
     }
   };
@@ -120,18 +145,32 @@ export default function ApplyModal({ jobId, jobTitle, companyName, onSuccess, on
           </button>
         </div>
 
-        {/* Success state */}
+        {/* Processing / success state */}
         {successMsg ? (
           <div
             style={{
               textAlign: 'center',
               padding: '2rem 1rem',
-              color: 'var(--color-success, #22c55e)',
-              fontSize: '1.1rem',
-              fontWeight: 700,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
             }}
           >
-            {successMsg}
+            {loading ? (
+              /* Processing phase — show spinner + neutral colour */
+              <>
+                <div className="spinner" style={{ width: 32, height: 32 }} />
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '1rem', fontWeight: 600 }}>
+                  {successMsg}
+                </span>
+              </>
+            ) : (
+              /* Completed phase — green success */
+              <span style={{ color: 'var(--color-success, #22c55e)', fontSize: '1.1rem', fontWeight: 700 }}>
+                {successMsg}
+              </span>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

@@ -30,3 +30,9 @@ export const getMe = async (signal?: AbortSignal): Promise<User> => {
   const res = await axiosClient.get<{ user: User }>('/auth/me', { signal });
   return res.data.user;
 };
+
+export const refreshToken = async (): Promise<string> => {
+  // refreshToken cookie is sent automatically via withCredentials
+  const res = await axiosClient.post<{ accessToken: string }>('/auth/refresh');
+  return res.data.accessToken;
+};

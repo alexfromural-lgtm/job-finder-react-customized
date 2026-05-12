@@ -77,12 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen for 401 events from the axios interceptor
   useEffect(() => {
-    const handle = () => {
+    const handleUnauthorized = () => {
       setUser(null);
       setAccessToken(null);
     };
-    window.addEventListener('auth:unauthorized', handle);
-    return () => window.removeEventListener('auth:unauthorized', handle);
+    const handleTokenRefreshed = (e: Event) => {
+      const newToken = (e as CustomEvent<string>).detail;
+      setAccessToken(newToken);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    window.addEventListener('auth:tokenRefreshed', handleTokenRefreshed);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      window.removeEventListener('auth:tokenRefreshed', handleTokenRefreshed);
+    };
   }, []);
 
   return (

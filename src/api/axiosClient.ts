@@ -20,15 +20,40 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response interceptor: clear token on 401 ────────────────────────────────
+// ─── Response interceptor: silent refresh + single-shot retry on 401 ─────────
 axiosClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      // Let the AuthContext handle the redirect
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+  async (error) => {
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean };
+
+    // Only attempt refresh once per request; skip if the failing call IS /auth/refresh
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      originalRequest._retry = true;
+
+      try {
+        // Call refresh directly (no interceptor loop — guarded by _retry above)
+        const res = await axiosClient.post<{ accessToken: string }>('/auth/refresh');
+        const newToken = res.data.accessToken;
+
+        // Persist and broadcast so AuthContext can sync its state
+        localStorage.setItem('accessToken', newToken);
+        window.dispatchEvent(new CustomEvent('auth:tokenRefreshed', { detail: newToken }));
+
+        // Replay the original request with the fresh token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return axiosClient(originalRequest);
+      } catch {
+        // Refresh failed — clear everything and signal logout
+        localStorage.removeItem('accessToken');
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        return Promise.reject(error);
+      }
     }
+
     return Promise.reject(error);
   }
 );

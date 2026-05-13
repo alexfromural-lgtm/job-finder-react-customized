@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import type { Job } from '../types';
 import * as JobsApi from '../api/jobs.api';
 import type { JobsMeta } from '../api/jobs.api';
-import { PAGE_SIZES } from './usePaginatedJobs';
+import { PAGE_SIZES } from './usePagination';
 
 const DEFAULT_PAGE_SIZE = 10;
 

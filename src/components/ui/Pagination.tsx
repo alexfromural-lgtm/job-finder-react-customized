@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { PAGE_SIZES } from '../../hooks/usePaginatedJobs';
+import { PAGE_SIZES } from '../../hooks/usePagination';
 
 interface PaginationProps {
   currentPage: number;

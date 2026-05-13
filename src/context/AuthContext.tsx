@@ -40,11 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // On mount: attempt to restore session by calling /auth/me.
   // The browser sends the accessToken cookie automatically.
   // If the token is expired, the axios interceptor will transparently refresh it.
+  // AbortController ensures React 18 StrictMode's double-mount doesn't fire two
+  // real requests — the first effect cleanup cancels the in-flight call.
   useEffect(() => {
-    AuthApi.getMe()
+    const controller = new AbortController();
+    AuthApi.getMe(controller.signal)
       .then((me) => setUser(me))
-      .catch(() => setUser(null))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return; // ignore aborted requests
+        setUser(null);
+      })
       .finally(() => setIsLoading(false));
+    return () => controller.abort();
   }, []);
 
   // Listen for 401 events from the axios interceptor (refresh also failed)

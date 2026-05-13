@@ -33,7 +33,7 @@ export default function JobSeekerDashboard() {
     filteredJobs, pageItems, hasMore, loadingMore,
     setSearch,
     goToPage, setPageSize, setScrollMode, loadMore,
-  } = usePaginatedJobs({ allJobs: jobs, defaultPageSize: 10, enableCategory: false });
+  } = usePaginatedJobs({ allJobs: jobs, defaultPageSize: 10 });
 
   return (
     <div className="page hero-gradient">

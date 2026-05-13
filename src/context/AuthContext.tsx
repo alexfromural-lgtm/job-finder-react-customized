@@ -27,14 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
-  const fetchUser = useCallback(async (token: string, signal?: AbortSignal) => {
+  const fetchUser = useCallback(async (token: string) => {
     try {
       localStorage.setItem('accessToken', token);
       setAccessToken(token);
-      const me = await AuthApi.getMe(signal);
+      const me = await AuthApi.getMe();
       setUser(me);
     } catch (err: unknown) {
-      if ((err as { code?: string })?.code === 'ERR_CANCELED') return; // aborted — ignore
+      // Ignore aborted requests (component unmounted during fetch)
+      if (
+        (err as { code?: string })?.code === 'ERR_CANCELED' ||
+        (err as { name?: string })?.name === 'AbortError'
+      ) return;
       localStorage.removeItem('accessToken');
       setAccessToken(null);
       setUser(null);
@@ -47,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [fetchUser]
   );
+
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -66,13 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // On mount: if we have a stored token, try to restore the session
+  // On mount: if we have a stored token, try to restore the session.
+  // We intentionally do NOT pass an AbortSignal here so the axios
+  // refresh-and-retry interceptor can complete even if React's StrictMode
+  // double-mounts and unmounts the component mid-flight.
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) { setIsLoading(false); return; }
-    const controller = new AbortController();
-    fetchUser(token, controller.signal).finally(() => setIsLoading(false));
-    return () => controller.abort();
+    fetchUser(token).finally(() => setIsLoading(false));
   }, [fetchUser]);
 
   // Listen for 401 events from the axios interceptor

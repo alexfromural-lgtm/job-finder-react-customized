@@ -102,10 +102,6 @@ export interface RecruiterSignupRequest {
   industry?: string;
 }
 
-export interface AuthResponse {
-  accessToken: string;
-}
-
 export interface JobFormData {
   title: string;
   description: string;

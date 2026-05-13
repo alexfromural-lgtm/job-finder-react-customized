@@ -4,22 +4,17 @@ import * as AuthApi from '../api/auth.api';
 
 interface AuthContextValue {
   user: User | null;
-  accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   hasRole: (role: Role) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setTokenAndFetchUser: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(
-    () => localStorage.getItem('accessToken')
-  );
   const [isLoading, setIsLoading] = useState(true);
 
   const hasRole = useCallback(
@@ -27,90 +22,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
-  const fetchUser = useCallback(async (token: string) => {
-    try {
-      localStorage.setItem('accessToken', token);
-      setAccessToken(token);
-      const me = await AuthApi.getMe();
-      setUser(me);
-    } catch (err: unknown) {
-      // Ignore aborted requests (component unmounted during fetch)
-      if (
-        (err as { code?: string })?.code === 'ERR_CANCELED' ||
-        (err as { name?: string })?.name === 'AbortError'
-      ) return;
-      localStorage.removeItem('accessToken');
-      setAccessToken(null);
-      setUser(null);
-    }
+  const login = useCallback(async (email: string, password: string) => {
+    // Backend sets accessToken + refreshToken cookies; just fetch the user profile
+    await AuthApi.login({ email, password });
+    const me = await AuthApi.getMe();
+    setUser(me);
   }, []);
-
-  const setTokenAndFetchUser = useCallback(
-    async (token: string) => {
-      await fetchUser(token);
-    },
-    [fetchUser]
-  );
-
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const { accessToken: token } = await AuthApi.login({ email, password });
-      await fetchUser(token);
-    },
-    [fetchUser]
-  );
 
   const logout = useCallback(async () => {
     try {
-      await AuthApi.logout();
+      await AuthApi.logout(); // backend clears both cookies
     } finally {
-      localStorage.removeItem('accessToken');
-      setAccessToken(null);
       setUser(null);
     }
   }, []);
 
-  // On mount: if we have a stored token, try to restore the session.
-  // We intentionally do NOT pass an AbortSignal here so the axios
-  // refresh-and-retry interceptor can complete even if React's StrictMode
-  // double-mounts and unmounts the component mid-flight.
+  // On mount: attempt to restore session by calling /auth/me.
+  // The browser sends the accessToken cookie automatically.
+  // If the token is expired, the axios interceptor will transparently refresh it.
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) { setIsLoading(false); return; }
-    fetchUser(token).finally(() => setIsLoading(false));
-  }, [fetchUser]);
+    AuthApi.getMe()
+      .then((me) => setUser(me))
+      .catch(() => setUser(null))
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  // Listen for 401 events from the axios interceptor
+  // Listen for 401 events from the axios interceptor (refresh also failed)
   useEffect(() => {
-    const handleUnauthorized = () => {
-      setUser(null);
-      setAccessToken(null);
-    };
-    const handleTokenRefreshed = (e: Event) => {
-      const newToken = (e as CustomEvent<string>).detail;
-      setAccessToken(newToken);
-    };
-
+    const handleUnauthorized = () => setUser(null);
     window.addEventListener('auth:unauthorized', handleUnauthorized);
-    window.addEventListener('auth:tokenRefreshed', handleTokenRefreshed);
-    return () => {
-      window.removeEventListener('auth:unauthorized', handleUnauthorized);
-      window.removeEventListener('auth:tokenRefreshed', handleTokenRefreshed);
-    };
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        accessToken,
         isLoading,
         isAuthenticated: !!user,
         hasRole,
         login,
         logout,
-        setTokenAndFetchUser,
       }}
     >
       {children}

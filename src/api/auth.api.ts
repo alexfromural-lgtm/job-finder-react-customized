@@ -1,25 +1,21 @@
 import axiosClient from './axiosClient';
 import type {
-  AuthResponse,
   LoginRequest,
   JobSeekerSignupRequest,
   RecruiterSignupRequest,
   User,
 } from '../types';
 
-export const signupJobSeeker = async (data: JobSeekerSignupRequest): Promise<AuthResponse> => {
-  const res = await axiosClient.post<AuthResponse>('/auth/signup/jobseeker', data);
-  return res.data;
+export const signupJobSeeker = async (data: JobSeekerSignupRequest): Promise<void> => {
+  await axiosClient.post('/auth/signup/jobseeker', data);
 };
 
-export const signupRecruiter = async (data: RecruiterSignupRequest): Promise<AuthResponse> => {
-  const res = await axiosClient.post<AuthResponse>('/auth/signup/recruiter', data);
-  return res.data;
+export const signupRecruiter = async (data: RecruiterSignupRequest): Promise<void> => {
+  await axiosClient.post('/auth/signup/recruiter', data);
 };
 
-export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-  const res = await axiosClient.post<AuthResponse>('/auth/login', data);
-  return res.data;
+export const login = async (data: LoginRequest): Promise<void> => {
+  await axiosClient.post('/auth/login', data);
 };
 
 export const logout = async (): Promise<void> => {
@@ -31,8 +27,8 @@ export const getMe = async (signal?: AbortSignal): Promise<User> => {
   return res.data.user;
 };
 
-export const refreshToken = async (): Promise<string> => {
+export const refreshToken = async (): Promise<void> => {
   // refreshToken cookie is sent automatically via withCredentials
-  const res = await axiosClient.post<{ accessToken: string }>('/auth/refresh');
-  return res.data.accessToken;
+  // backend sets a fresh accessToken cookie in the response
+  await axiosClient.post('/auth/refresh');
 };

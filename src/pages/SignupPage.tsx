@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import * as AuthApi from '../api/auth.api';
 import { Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -10,7 +9,6 @@ type Tab = 'seeker' | 'recruiter';
 export default function SignupPage() {
   const [params] = useSearchParams();
   const [tab, setTab] = useState<Tab>((params.get('role') as Tab) ?? 'seeker');
-  const { setTokenAndFetchUser } = useAuth();
   const navigate = useNavigate();
 
   // Shared fields
@@ -43,11 +41,10 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      let result;
       if (tab === 'seeker') {
-        result = await AuthApi.signupJobSeeker({ name, email, password });
+        await AuthApi.signupJobSeeker({ name, email, password });
       } else {
-        result = await AuthApi.signupRecruiter({
+        await AuthApi.signupRecruiter({
           name,
           email,
           password,
@@ -56,7 +53,8 @@ export default function SignupPage() {
           industry: industry || undefined,
         });
       }
-      await setTokenAndFetchUser(result.accessToken);
+      // Backend set both cookies; navigate to the dashboard.
+      // AuthContext will call /auth/me on mount and populate user state from the cookie.
       navigate(tab === 'seeker' ? '/dashboard/seeker' : '/dashboard/recruiter');
     } catch (err: any) {
       setError(err?.response?.data?.error ?? 'Registration failed. Please try again.');

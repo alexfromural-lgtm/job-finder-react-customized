@@ -1,6 +1,6 @@
 # ⚡ Job Finder — Frontend
 
-A React 19 + TypeScript single-page application for the Job Finder platform. Features role-based dashboards for Job Seekers and Recruiters, JWT cookie auth, server-side paginated job search, profile management, and an **async job application workflow** backed by a Redis/Bull message queue — all wrapped in a premium dark-mode UI.
+A React 19 + TypeScript single-page application for the Job Finder platform. Features role-based dashboards for Job Seekers and Recruiters, JWT cookie auth with **silent token refresh**, server-side paginated job search, profile management, and an **async job application workflow** backed by a Redis/Bull message queue — all wrapped in a premium dark-mode UI.
 
 ---
 
@@ -41,7 +41,7 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 ## 🛠 Tech Stack
 
 | Technology | Version | Purpose |
-|------------|---------|---------|
+|------------|---------|---------| 
 | React | 19 | UI library |
 | TypeScript | ~5.8 | Type safety |
 | Vite | 7+ | Dev server & bundler |
@@ -56,14 +56,14 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 ```
 src/
 ├── api/
-│   ├── axiosClient.ts        # Base axios instance + auth interceptors
-│   ├── auth.api.ts           # signup, login, logout, getMe
+│   ├── axiosClient.ts        # Base axios instance + auth interceptors (silent refresh)
+│   ├── auth.api.ts           # signup, login, logout, getMe, refreshToken
 │   ├── jobs.api.ts           # searchJobs (paginated), getAllJobs, getJobById, CRUD
 │   ├── profile.api.ts        # get/update recruiter & job-seeker profiles
 │   ├── applications.api.ts   # applyToJob (enqueue), getMyApplications, withdrawApplication
 │   └── queue.api.ts          # getQueueJobStatus, pollUntilDone helper
 ├── context/
-│   └── AuthContext.tsx       # User state, token lifecycle, hasRole()
+│   └── AuthContext.tsx       # User state, token lifecycle, hasRole(), auth event listeners
 ├── hooks/
 │   ├── usePaginatedJobs.ts   # Debounce, pagination, infinite-scroll, URL sync
 │   └── useJobSearch.ts       # Server-side search wrapper (debounced)
@@ -72,8 +72,10 @@ src/
 ├── components/
 │   ├── ui/                   # Button, Input, Card, Badge, Modal, Pagination
 │   ├── layout/               # Navbar, ProtectedRoute
+│   ├── landing/              # LandingHero, LandingJobListings
 │   └── jobs/                 # JobCard, JobList, JobForm, JobFilterBar,
-│                             # ApplyModal, ApplicationsList
+│                             # JobDetailHeader, JobDetailBody, JobDetailSection,
+│                             # JobDetailCTA, ApplyModal, ApplicationsList
 └── pages/
     ├── LandingPage.tsx               # Public — browse & filter jobs (paginated)
     ├── LoginPage.tsx                 # Public — sign in
@@ -82,7 +84,15 @@ src/
     ├── jobseeker/
     │   ├── DashboardPage.tsx         # Protected (JOB_SEEKER) — browse jobs
     │   ├── ProfilePage.tsx           # Protected (JOB_SEEKER) — view/edit profile
-    │   └── ApplicationsPage.tsx      # Protected (JOB_SEEKER) — my applications
+    │   ├── ApplicationsPage.tsx      # Protected (JOB_SEEKER) — my applications
+    │   └── profile/                  # Profile sub-components
+    │       ├── ProfileHeader.tsx     # Avatar, name, edit-mode toggle
+    │       ├── AboutSection.tsx      # Bio & location fields
+    │       ├── SkillsSection.tsx     # Skills tag list
+    │       ├── SkillTagInput.tsx     # Tag input with add/remove
+    │       ├── BackgroundSection.tsx # Education & experience fields
+    │       ├── FieldRow.tsx          # Labelled field display/edit row
+    │       └── ProfileAlerts.tsx     # Success / error alert banners
     └── recruiter/
         ├── DashboardPage.tsx         # Protected (RECRUITER) — CRUD job postings
         └── ProfilePage.tsx           # Protected (RECRUITER) — view/edit profile
@@ -95,10 +105,16 @@ src/
 1. **Signup / Login** → backend returns `{ accessToken }` and sets a `refreshToken` HTTP-only cookie.
 2. `accessToken` is stored in `localStorage` and attached to every request via an axios request interceptor (`Authorization: Bearer <token>`).
 3. On page reload, the stored token is restored and `GET /api/auth/me` is called to rehydrate the user session.
-4. On any `401` response, the axios response interceptor fires an `auth:unauthorized` custom event; `AuthContext` listens and clears local state.
-5. After a successful login, users are redirected to their role-specific dashboard:
+4. **On any `401` response**, the axios response interceptor attempts a silent token refresh:
+   - Calls `POST /api/auth/refresh` (uses the HTTP-only cookie automatically).
+   - On success: stores the new token, dispatches `auth:tokenRefreshed`, and **retries the original request** — transparent to the caller.
+   - On failure: removes the stored token, dispatches `auth:unauthorized`, and logs the user out.
+5. `AuthContext` listens for `auth:tokenRefreshed` and `auth:unauthorized` custom events to keep in-memory user state in sync.
+6. After a successful login, users are redirected to their role-specific dashboard:
    - `RECRUITER` → `/dashboard/recruiter`
    - `JOB_SEEKER` → `/dashboard/seeker`
+
+> The `_retry` flag on each request config ensures the refresh is only attempted **once per request**, and refresh calls are excluded from retry to prevent infinite loops.
 
 ---
 
@@ -114,7 +130,8 @@ All calls go through `axiosClient` with `baseURL: '/api'` (Vite proxies `/api` �
 | `POST` | `/auth/signup/recruiter` | — | Recruiter registration |
 | `POST` | `/auth/login` | — | Login |
 | `POST` | `/auth/logout` | — | Logout |
-| `GET`  | `/auth/me` | Bearer | Restore session |
+| `POST` | `/auth/refresh` | Cookie | Silent token refresh (called by interceptor) |
+| `GET`  | `/auth/me` | Bearer | Restore session on reload |
 
 ### Jobs
 
@@ -172,7 +189,7 @@ All calls go through `axiosClient` with `baseURL: '/api'` (Vite proxies `/api` �
 
 ## 📬 Async Apply Flow
 
-Applying to a job is now fully asynchronous to keep the UI responsive under high load:
+Applying to a job is fully asynchronous to keep the UI responsive under high load:
 
 1. **`ApplyModal` submits** → `POST /api/jobseeker/apply/:jobId` — backend responds `202 Accepted` with a Bull `jobId`.
 2. **Modal polls** → `GET /api/queue/job/:jobId` every 600 ms (via `pollUntilDone` in `queue.api.ts`) until the status is `completed` or `failed`, or 30 s elapses.

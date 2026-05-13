@@ -50,7 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (err?.code === 'ERR_CANCELED') return; // ignore aborted requests
         setUser(null);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        // Only clear the loading flag if this effect instance was NOT aborted.
+        // In React 18 StrictMode, the first mount is immediately unmounted and
+        // its controller is aborted. Setting isLoading=false on that aborted
+        // request would make ProtectedRoute redirect to /login before the
+        // second (real) request completes.
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

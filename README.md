@@ -65,7 +65,11 @@ src/
 ├── context/
 │   └── AuthContext.tsx       # User state, token lifecycle, hasRole(), auth event listeners
 ├── hooks/
-│   ├── usePaginatedJobs.ts   # Debounce, pagination, infinite-scroll, URL sync
+│   ├── useDebounce.ts        # Generic — debounces any value T for N ms
+│   ├── usePagination.ts      # Generic — page math, getPageSlice<T>, owns PAGE_SIZES
+│   ├── useInfiniteScroll.ts  # Generic — visible-count, loadMore, getVisibleSlice<T>
+│   ├── useUrlSync.ts         # Generic — syncs any flat string map → URL search params
+│   ├── usePaginatedJobs.ts   # Job-specific orchestrator composing the four hooks above
 │   └── useJobSearch.ts       # Server-side search wrapper (debounced)
 ├── types/
 │   └── index.ts              # TypeScript interfaces (User, Job, Application, profiles…)
@@ -207,14 +211,54 @@ apply click → POST /apply/:jobId → 202 { jobId }
 
 ---
 
+## 🪝 Hooks
+
+All custom hooks live in `src/hooks/`. The layer is split into four **generic primitives** (no domain dependency) and one **job-specific orchestrator**.
+
+### Generic primitives
+
+| Hook | Signature | Responsibility |
+|------|-----------|----------------|
+| `useDebounce` | `<T>(value: T, delayMs?)` | Returns a debounced copy of any value; cleans up the timer on unmount |
+| `usePagination` | `({ totalItems, initialPage?, initialPageSize? })` | Page math, `getPageSlice<T>`, owns `PAGE_SIZES = [10, 25, 50]` |
+| `useInfiniteScroll` | `({ totalItems, pageSize, initialVisible? })` | Manages `visibleCount`, exposes `loadMore` and `getVisibleSlice<T>` |
+| `useUrlSync` | `(params: Record<string, string \| undefined>)` | Writes any flat param map to URL search string (replace mode); omits empty keys |
+
+All four work with generics (`<T>`) and have **zero imports from domain types** — they can be reused on any future page.
+
+### Job-specific orchestrator
+
+**`usePaginatedJobs`** — the only hook that imports `Job`. It composes the four primitives:
+
+```
+usePaginatedJobs
+  ├─ useDebounce        (debounced search input)
+  ├─ usePagination      (page math + slicing)
+  ├─ useInfiniteScroll  (scroll-mode visible window)
+  └─ useUrlSync         (search / category / page / pageSize → URL)
+```
+
+The filter predicate is **injectable** via a `filterFn` option (Dependency Inversion), with a sensible default that matches title, location, and description. The hook re-exports `PAGE_SIZES` / `PageSize` for backward compatibility.
+
+### SOLID alignment
+
+| Principle | How it's applied |
+|-----------|------------------|
+| **SRP** | Each primitive owns exactly one concern (debounce / page math / scroll state / URL sync) |
+| **OCP** | Pass a custom `filterFn` to extend filtering without touching hook internals |
+| **ISP** | Generic hooks expose only what they own; consumers pull only what they need |
+| **DIP** | `usePaginatedJobs` depends on the `JobFilterFn` abstraction, not a concrete field list |
+
+---
+
 ## 🔍 Search, Pagination & Infinite Scroll
 
 The `usePaginatedJobs` hook (used on LandingPage and Seeker Dashboard) provides:
 
 - **Debounced search** (300 ms) — filters by title, location, and description.
-- **Configurable page sizes** — `10 / 25 / 50` items per page, selectable via the UI.
-- **Infinite-scroll mode** — toggle to replace classic pagination with "Load More".
-- **URL state persistence** — `search`, `category`, `page`, and `pageSize` are synced to query params so filters survive navigation and sharing.
+- **Configurable page sizes** — `10 / 25 / 50` items per page (defined in `usePagination`, imported by `Pagination.tsx` and `useJobSearch.ts`).
+- **Infinite-scroll mode** — toggle to replace classic pagination with "Load More" (powered by `useInfiniteScroll`).
+- **URL state persistence** — `search`, `category`, `page`, and `pageSize` are synced to query params via `useUrlSync` so filters survive navigation and sharing.
 
 For the Landing Page, `searchJobs()` additionally passes params server-side to `GET /jobs/all`, enabling server-driven pagination and reducing client-side data transfer.
 

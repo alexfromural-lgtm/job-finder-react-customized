@@ -132,7 +132,10 @@ export function useJobSearch(): UseJobSearchResult {
         setMeta(newMeta);
         setPage(nextPage);
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED') return;
+        setError('Could not load more jobs. Please try again.');
+      })
       .finally(() => setLoadingMore(false));
   }, [loadingMore, meta, debouncedSearch, categoryFilter, pageSize]);
 

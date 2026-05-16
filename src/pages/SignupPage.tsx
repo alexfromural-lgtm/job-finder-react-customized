@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import * as AuthApi from '../api/auth.api';
+import { useAuth } from '../context/AuthContext';
+import { extractApiError } from '../utils/apiError';
 import { Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 type Tab = 'seeker' | 'recruiter';
 
 export default function SignupPage() {
+  const { signupJobSeeker, signupRecruiter } = useAuth();
   const [params] = useSearchParams();
   const [tab, setTab] = useState<Tab>((params.get('role') as Tab) ?? 'seeker');
   const navigate = useNavigate();
@@ -42,9 +44,9 @@ export default function SignupPage() {
     setError('');
     try {
       if (tab === 'seeker') {
-        await AuthApi.signupJobSeeker({ name, email, password });
+        await signupJobSeeker({ name, email, password });
       } else {
-        await AuthApi.signupRecruiter({
+        await signupRecruiter({
           name,
           email,
           password,
@@ -53,11 +55,11 @@ export default function SignupPage() {
           industry: industry || undefined,
         });
       }
-      // Backend set both cookies; navigate to the dashboard.
-      // AuthContext will call /auth/me on mount and populate user state from the cookie.
+      // AuthContext has already populated user state via getMe().
+      // Navigate directly to the dashboard.
       navigate(tab === 'seeker' ? '/dashboard/seeker' : '/dashboard/recruiter');
-    } catch (err: any) {
-      setError(err?.response?.data?.error ?? 'Registration failed. Please try again.');
+    } catch (err) {
+      setError(extractApiError(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }

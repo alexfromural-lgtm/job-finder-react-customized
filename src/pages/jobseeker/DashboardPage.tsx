@@ -1,39 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import * as JobsApi from '../../api/jobs.api';
-import type { Job } from '../../types';
+import { useNavigate } from 'react-router-dom';
 import JobList from '../../components/jobs/JobList';
 import Pagination from '../../components/ui/Pagination';
 import Button from '../../components/ui/Button';
-import { usePaginatedJobs } from '../../hooks/usePaginatedJobs';
+import { useJobSearch } from '../../hooks/useJobSearch';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function JobSeekerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const controller = new AbortController();
-    JobsApi.getAllJobs(controller.signal)
-      .then(setJobs)
-      .catch((err) => {
-        if (err?.code === 'ERR_CANCELED') return;
-        setError('Failed to load jobs.');
-      })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
+  usePageTitle('Dashboard');
 
   const {
-    search,
-    currentPage, pageSize, totalPages, scrollMode,
-    filteredJobs, pageItems, hasMore, loadingMore,
-    setSearch,
-    goToPage, setPageSize, setScrollMode, loadMore,
-  } = usePaginatedJobs({ allJobs: jobs, defaultPageSize: 10 });
+    search, categoryFilter, page, pageSize, scrollMode,
+    categories, meta, displayJobs, hasMore,
+    loading, loadingMore, error,
+    setSearch, setCategoryFilter, setPage, setPageSize, setScrollMode, loadMore,
+  } = useJobSearch();
 
   return (
     <div className="page hero-gradient">
@@ -58,31 +41,51 @@ export default function JobSeekerDashboard() {
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <div className="glass" style={{ padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                {jobs.filter((j) => j.isActive).length}
+                {meta.total}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Open Jobs</div>
             </div>
           </div>
         </div>
 
-        {/* Search bar */}
+        {/* Search + filter bar */}
         <div
           className="glass"
           style={{
             display: 'flex', gap: '1rem', padding: '1rem 1.5rem',
-            borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem', alignItems: 'center',
+            borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem',
+            alignItems: 'center', flexWrap: 'wrap',
           }}
         >
           <input
             id="seeker-job-search"
             className="input"
-            placeholder="🔍  Search jobs or location..."
+            placeholder="🔍  Search jobs, skills, or location..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 200 }}
           />
-          {search && (
-            <Button id="seeker-clear-search" variant="ghost" size="sm" onClick={() => setSearch('')}>
+          {categories.length > 0 && (
+            <select
+              id="seeker-category-filter"
+              className="input"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={{ maxWidth: 200 }}
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+          {(search || categoryFilter) && (
+            <Button
+              id="seeker-clear-filters"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSearch(''); setCategoryFilter(''); }}
+            >
               Clear
             </Button>
           )}
@@ -91,7 +94,7 @@ export default function JobSeekerDashboard() {
         {/* Heading */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
-            {loading ? 'Loading jobs…' : `${filteredJobs.length} Available Job${filteredJobs.length !== 1 ? 's' : ''}`}
+            {loading ? 'Loading jobs…' : `${meta.total} Available Job${meta.total !== 1 ? 's' : ''}`}
           </h2>
           <Button id="browse-all-btn" variant="ghost" size="sm" onClick={() => navigate('/')}>
             Browse All →
@@ -101,22 +104,22 @@ export default function JobSeekerDashboard() {
         {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
         <JobList
-          jobs={pageItems}
+          jobs={displayJobs}
           loading={loading}
           emptyMessage="No jobs match your search."
           onLoadMore={scrollMode ? loadMore : undefined}
           loadingMore={loadingMore}
         />
 
-        {!loading && filteredJobs.length > 0 && (
+        {!loading && meta.total > 0 && (
           <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
+            currentPage={page}
+            totalPages={meta.totalPages}
             pageSize={pageSize}
             scrollMode={scrollMode}
-            totalItems={filteredJobs.length}
+            totalItems={meta.total}
             hasMore={hasMore}
-            onPageChange={goToPage}
+            onPageChange={setPage}
             onPageSizeChange={setPageSize}
             onScrollModeToggle={setScrollMode}
           />

@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { extractApiError } from '../utils/apiError';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 export default function LoginPage() {
   const { login, hasRole } = useAuth();
   const navigate = useNavigate();
+  usePageTitle('Sign In');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,8 +33,8 @@ export default function LoginPage() {
       } else {
         navigate('/');
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.error ?? 'Invalid email or password.');
+    } catch (err) {
+      setError(extractApiError(err, 'Invalid email or password.'));
     } finally {
       setLoading(false);
     }

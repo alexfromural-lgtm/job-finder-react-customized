@@ -17,16 +17,16 @@ export const updateRecruiterProfile = async (
 };
 
 // ─── Job Seeker Profile ───────────────────────────────────────────────────────
-// Response shape: { profile: JobSeekerProfile }
+// Response shape: { data: JobSeekerProfile }
 
 export const getJobSeekerProfile = async (signal?: AbortSignal): Promise<JobSeekerProfile> => {
-  const res = await axiosClient.get<{ profile: JobSeekerProfile }>('/jobseeker/profile', { signal });
-  return res.data.profile;
+  const res = await axiosClient.get<{ data: JobSeekerProfile }>('/jobseeker/profile', { signal });
+  return res.data.data;
 };
 
 export const updateJobSeekerProfile = async (
   data: Partial<Pick<JobSeekerProfile, 'bio' | 'location' | 'skills' | 'education' | 'experience' | 'resumeUrl'>>
 ): Promise<JobSeekerProfile> => {
-  const res = await axiosClient.patch<{ profile: JobSeekerProfile }>('/jobseeker/profile', data);
-  return res.data.profile;
+  const res = await axiosClient.patch<{ data: JobSeekerProfile }>('/jobseeker/profile', data);
+  return res.data.data;
 };

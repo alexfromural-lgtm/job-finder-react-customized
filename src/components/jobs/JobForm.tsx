@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { JobFormData, Job } from '../../types';
 import { Input, Textarea } from '../ui/Input';
 import Button from '../ui/Button';
+import { extractApiError } from '../../utils/apiError';
 
 interface JobFormProps {
   initial?: Partial<Job>;
@@ -69,8 +70,8 @@ export default function JobForm({ initial, onSubmit, onCancel, submitLabel = 'Po
         salaryRange: form.salaryRange || undefined,
         category: form.category || undefined,
       });
-    } catch (err: any) {
-      setServerError(err?.response?.data?.error ?? 'Something went wrong');
+    } catch (err) {
+      setServerError(extractApiError(err, 'Something went wrong'));
     } finally {
       setLoading(false);
     }

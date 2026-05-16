@@ -6,13 +6,16 @@ import JobCard from '../../components/jobs/JobCard';
 import JobForm from '../../components/jobs/JobForm';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import { extractApiError } from '../../utils/apiError';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 
 export default function RecruiterDashboard() {
-  useAuth();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  usePageTitle('My Job Postings');
 
   // Modal state
   const [createOpen, setCreateOpen] = useState(false);
@@ -28,7 +31,7 @@ export default function RecruiterDashboard() {
       setJobs(data);
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === 'ERR_CANCELED') return;
-      setError('Failed to load your job postings.');
+      setError(extractApiError(err, 'Failed to load your job postings.'));
     } finally {
       setLoading(false);
     }
@@ -68,8 +71,8 @@ export default function RecruiterDashboard() {
       setDeleteTarget(null);
       flash('Job deleted.');
       await fetchJobs();
-    } catch {
-      setError('Failed to delete job.');
+    } catch (err) {
+      setError(extractApiError(err, 'Failed to delete job.'));
     } finally {
       setDeleteLoading(false);
     }
@@ -100,7 +103,7 @@ export default function RecruiterDashboard() {
               My Job Postings
             </h1>
             <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-              Manage your listings, find the right candidate.
+              Welcome back, {user?.name?.split(' ')[0]}. Manage your listings, find the right candidate.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>

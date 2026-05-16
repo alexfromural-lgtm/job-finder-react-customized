@@ -1,5 +1,12 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { User, Role } from '../types';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
+import type { User, Role, JobSeekerSignupRequest, RecruiterSignupRequest } from '../types';
 import * as AuthApi from '../api/auth.api';
 
 interface AuthContextValue {
@@ -9,6 +16,8 @@ interface AuthContextValue {
   hasRole: (role: Role) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signupJobSeeker: (data: JobSeekerSignupRequest) => Promise<void>;
+  signupRecruiter: (data: RecruiterSignupRequest) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,6 +44,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
     }
+  }, []);
+
+  /**
+   * Signs up a job seeker and immediately hydrates the auth context.
+   * This ensures the user is "logged in" right after signup without
+   * a separate login step.
+   */
+  const signupJobSeeker = useCallback(async (data: JobSeekerSignupRequest) => {
+    await AuthApi.signupJobSeeker(data);
+    const me = await AuthApi.getMe();
+    setUser(me);
+  }, []);
+
+  /**
+   * Signs up a recruiter and immediately hydrates the auth context.
+   */
+  const signupRecruiter = useCallback(async (data: RecruiterSignupRequest) => {
+    await AuthApi.signupRecruiter(data);
+    const me = await AuthApi.getMe();
+    setUser(me);
   }, []);
 
   // On mount: attempt to restore session by calling /auth/me.
@@ -79,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasRole,
         login,
         logout,
+        signupJobSeeker,
+        signupRecruiter,
       }}
     >
       {children}

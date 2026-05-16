@@ -79,6 +79,43 @@ export interface Application {
   };
 }
 
+export interface SavedJob {
+  id: string;
+  jobId: string;
+  jobSeekerId: string;
+  savedAt: string;
+  /** Populated by GET /jobseeker/saved */
+  job?: {
+    id: string;
+    title: string;
+    location: string;
+    salaryRange?: string;
+    category?: string;
+    isActive: boolean;
+    recruiter?: { companyName: string };
+  };
+}
+
+// ─── Queue ────────────────────────────────────────────────────────────────────
+
+export type QueueJobStatus =
+  | 'waiting'
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'delayed'
+  | 'paused';
+
+export interface QueueJobResponse {
+  id: string | number;
+  type: string;
+  status: QueueJobStatus;
+  attemptsMade: number;
+  createdAt: string;
+  result?: unknown;
+  failedReason?: string;
+}
+
 // ─── API Request/Response Types ───────────────────────────────────────────────
 
 export interface LoginRequest {

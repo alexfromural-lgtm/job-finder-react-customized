@@ -57,23 +57,32 @@ A React 19 + TypeScript single-page application for the Job Finder platform. Fea
 src/
 ├── api/
 │   ├── axiosClient.ts        # Base axios instance + auth interceptors (silent refresh)
+│   │                         #   VITE_API_BASE_URL env override + 10 s request timeout (NEW)
 │   ├── auth.api.ts           # signup, login, logout, getMe, refreshToken
 │   ├── jobs.api.ts           # searchJobs (paginated), getAllJobs, getJobById, CRUD
 │   ├── profile.api.ts        # get/update recruiter & job-seeker profiles
 │   ├── applications.api.ts   # applyToJob (enqueue), getMyApplications, withdrawApplication
 │   └── queue.api.ts          # getQueueJobStatus, pollUntilDone helper
 ├── context/
-│   └── AuthContext.tsx       # User state, cookie-based session restore, hasRole(), auth event listener
+│   └── AuthContext.tsx       # User state, cookie-based session restore, hasRole(),
+│                             #   signupJobSeeker(), signupRecruiter() actions (NEW)
 ├── hooks/
 │   ├── useDebounce.ts        # Generic — debounces any value T for N ms
 │   ├── usePagination.ts      # Generic — page math, getPageSlice<T>, owns PAGE_SIZES
 │   ├── useInfiniteScroll.ts  # Generic — visible-count, loadMore, getVisibleSlice<T>
 │   ├── useUrlSync.ts         # Generic — syncs any flat string map → URL search params
 │   ├── usePaginatedJobs.ts   # Job-specific orchestrator composing the four hooks above
-│   └── useJobSearch.ts       # Server-side search wrapper (debounced)
+│   ├── useJobSearch.ts       # Server-side search wrapper (debounced) — updated signature
+│   ├── usePageTitle.ts       # Sets document.title with app-name suffix (NEW)
+│   └── useQueueStatus.ts     # Polls /queue/job/:id until terminal state (NEW)
 ├── types/
-│   └── index.ts              # TypeScript interfaces (User, Job, Application, profiles…)
+│   └── index.ts              # TypeScript interfaces — SavedJob, QueueJobStatus,
+│                             #   QueueJobResponse, JobSeekerSignupRequest,
+│                             #   RecruiterSignupRequest added (NEW)
+├── utils/
+│   └── apiError.ts           # extractApiError() — typed axios error → human string (NEW)
 ├── components/
+│   ├── ErrorBoundary.tsx     # Class component — catches render errors, shows fallback (NEW)
 │   ├── ui/                   # Button, Input, Card, Badge, Modal, Pagination
 │   ├── layout/               # Navbar, ProtectedRoute
 │   ├── landing/              # LandingHero, LandingJobListings
@@ -82,11 +91,13 @@ src/
 │                             # JobDetailCTA, ApplyModal, ApplicationsList
 └── pages/
     ├── LandingPage.tsx               # Public — browse & filter jobs (paginated)
-    ├── LoginPage.tsx                 # Public — sign in
-    ├── SignupPage.tsx                # Public — register (seeker or recruiter tabs)
+    ├── LoginPage.tsx                 # Public — sign in (usePageTitle, extractApiError)
+    ├── SignupPage.tsx                # Public — register via AuthContext signup actions
     ├── JobDetailPage.tsx             # Public — full job detail + Apply CTA
+    ├── NotFoundPage.tsx              # 404 fallback route (NEW)
     ├── jobseeker/
-    │   ├── DashboardPage.tsx         # Protected (JOB_SEEKER) — browse jobs
+    │   ├── DashboardPage.tsx         # Protected (JOB_SEEKER) — server-side search via
+    │   │                             #   useJobSearch; category filter dropdown added
     │   ├── ProfilePage.tsx           # Protected (JOB_SEEKER) — view/edit profile
     │   ├── ApplicationsPage.tsx      # Protected (JOB_SEEKER) — my applications
     │   └── profile/                  # Profile sub-components
@@ -98,7 +109,8 @@ src/
     │       ├── FieldRow.tsx          # Labelled field display/edit row
     │       └── ProfileAlerts.tsx     # Success / error alert banners
     └── recruiter/
-        ├── DashboardPage.tsx         # Protected (RECRUITER) — CRUD job postings
+        ├── DashboardPage.tsx         # Protected (RECRUITER) — CRUD job postings;
+        │                             #   extractApiError, usePageTitle, personalised greeting
         └── ProfilePage.tsx           # Protected (RECRUITER) — view/edit profile
 ```
 
@@ -122,11 +134,29 @@ Both the short-lived **access token** (15 min) and the long-lived **refresh toke
 
 > The `_retry` flag on each request config ensures the refresh is only attempted **once per request**, and refresh calls are excluded from retry to prevent infinite loops.
 
+### Signup via AuthContext
+
+`AuthContext` now exposes `signupJobSeeker()` and `signupRecruiter()` actions. Each calls the API then immediately calls `getMe()` to hydrate user state, so the user is logged in right after signup without a separate request from the page component.
+
 ---
 
 ## 🌐 API Integration
 
-All calls go through `axiosClient` with `baseURL: '/api'` (Vite proxies `/api` → `http://localhost:5002`).
+All calls go through `axiosClient` with `baseURL: VITE_API_BASE_URL ?? '/api'` (Vite proxies `/api` → `http://localhost:5002`). A **10-second request timeout** is enforced; timed-out requests surface as `'Request timed out. Please try again.'` via `extractApiError`.
+
+### Error handling
+
+All `catch` blocks use `extractApiError(err, fallback)` from `src/utils/apiError.ts` instead of raw `err?.response?.data?.error` access:
+
+```ts
+import { extractApiError } from '../utils/apiError';
+// …
+} catch (err) {
+  setError(extractApiError(err, 'Failed to load jobs.'));
+}
+```
+
+It prefers the structured `{ "error": "…" }` field returned by the backend, then falls back to network/timeout messages, then the supplied fallback string.
 
 ### Auth
 
@@ -159,12 +189,14 @@ All calls go through `axiosClient` with `baseURL: '/api'` (Vite proxies `/api` �
 | `GET`  | `/jobseeker/profile` | `JOB_SEEKER` | Get job seeker profile |
 | `PATCH` | `/jobseeker/profile` | `JOB_SEEKER` | Update job seeker profile |
 
+All profile responses now use the `{ data: … }` envelope — `profile.api.ts` reads `res.data.data`.
+
 ### Applications
 
 | Method | Endpoint | Auth | Usage |
 |--------|----------|------|-------|
 | `POST` | `/jobseeker/apply/:jobId` | `JOB_SEEKER` | Enqueue application — returns `202` + `{ jobId }` |
-| `GET`  | `/jobseeker/applications` | `JOB_SEEKER` | List my applications |
+| `GET`  | `/jobseeker/applications` | `JOB_SEEKER` | List my applications (supports `AbortSignal`) |
 | `DELETE` | `/jobseeker/applications/:id` | `JOB_SEEKER` | Withdraw application |
 
 ### Queue
@@ -188,6 +220,7 @@ All calls go through `axiosClient` with `baseURL: '/api'` (Vite proxies `/api` �
 | `/profile/seeker` | `JobSeekerProfilePage` | `JOB_SEEKER` required |
 | `/dashboard/recruiter` | `RecruiterDashboard` | `RECRUITER` required |
 | `/profile/recruiter` | `RecruiterProfilePage` | `RECRUITER` required |
+| `*` | `NotFoundPage` | Public (catch-all) |
 
 `ProtectedRoute` redirects unauthenticated users to `/login` and users without the required role to `/`.
 
@@ -211,11 +244,13 @@ apply click → POST /apply/:jobId → 202 { jobId }
         └─ status: failed → show error, re-enable form
 ```
 
+For components that only need to observe a queue job started elsewhere, use the `useQueueStatus(queueJobId)` hook — it polls at 1500 ms intervals and returns `{ status, result, error, isLoading }`.
+
 ---
 
 ## 🪝 Hooks
 
-All custom hooks live in `src/hooks/`. The layer is split into four **generic primitives** (no domain dependency) and one **job-specific orchestrator**.
+All custom hooks live in `src/hooks/`. The layer is split into four **generic primitives** (no domain dependency) and one **job-specific orchestrator**, plus new utility hooks.
 
 ### Generic primitives
 
@@ -225,8 +260,6 @@ All custom hooks live in `src/hooks/`. The layer is split into four **generic pr
 | `usePagination` | `({ totalItems, initialPage?, initialPageSize? })` | Page math, `getPageSlice<T>`, owns `PAGE_SIZES = [10, 25, 50]` |
 | `useInfiniteScroll` | `({ totalItems, pageSize, initialVisible? })` | Manages `visibleCount`, exposes `loadMore` and `getVisibleSlice<T>` |
 | `useUrlSync` | `(params: Record<string, string \| undefined>)` | Writes any flat param map to URL search string (replace mode); omits empty keys |
-
-All four work with generics (`<T>`) and have **zero imports from domain types** — they can be reused on any future page.
 
 ### Job-specific orchestrator
 
@@ -240,12 +273,19 @@ usePaginatedJobs
   └─ useUrlSync         (search / category / page / pageSize → URL)
 ```
 
-The filter predicate is **injectable** via a `filterFn` option (Dependency Inversion), with a sensible default that matches title, location, and description. The hook re-exports `PAGE_SIZES` / `PageSize` for backward compatibility.
+The filter predicate is **injectable** via a `filterFn` option (Dependency Inversion), with a sensible default that matches title, location, and description.
+
+### New utility hooks
+
+| Hook | Purpose |
+|------|---------|
+| `usePageTitle(title)` | Sets `document.title` to `"<title> \| Job Finder"` and restores the previous value on unmount |
+| `useQueueStatus(queueJobId)` | Polls `GET /queue/job/:id` at 1500 ms until `completed` or `failed`; returns `{ status, result, error, isLoading }` |
 
 ### SOLID alignment
 
 | Principle | How it's applied |
-|-----------|------------------|
+|-----------|-----------------|
 | **SRP** | Each primitive owns exactly one concern (debounce / page math / scroll state / URL sync) |
 | **OCP** | Pass a custom `filterFn` to extend filtering without touching hook internals |
 | **ISP** | Generic hooks expose only what they own; consumers pull only what they need |
@@ -255,14 +295,33 @@ The filter predicate is **injectable** via a `filterFn` option (Dependency Inver
 
 ## 🔍 Search, Pagination & Infinite Scroll
 
-The `usePaginatedJobs` hook (used on LandingPage and Seeker Dashboard) provides:
+The `useJobSearch` hook (used on the Job Seeker Dashboard) provides server-side search:
 
-- **Debounced search** (300 ms) — filters by title, location, and description.
-- **Configurable page sizes** — `10 / 25 / 50` items per page (defined in `usePagination`, imported by `Pagination.tsx` and `useJobSearch.ts`).
-- **Infinite-scroll mode** — toggle to replace classic pagination with "Load More" (powered by `useInfiniteScroll`).
-- **URL state persistence** — `search`, `category`, `page`, and `pageSize` are synced to query params via `useUrlSync` so filters survive navigation and sharing.
+- **Debounced search** (300 ms) — passed server-side to `GET /jobs/all`.
+- **Category filter** — dropdown populated from distinct categories in results.
+- **Configurable page sizes** — `10 / 25 / 50` items per page.
+- **Infinite-scroll mode** — toggle to replace classic pagination with "Load More".
+- **URL state persistence** — `search`, `category`, `page`, and `pageSize` are synced to query params so filters survive navigation and sharing.
 
 For the Landing Page, `searchJobs()` additionally passes params server-side to `GET /jobs/all`, enabling server-driven pagination and reducing client-side data transfer.
+
+---
+
+## 🧱 Error Boundary
+
+`src/components/ErrorBoundary.tsx` wraps the entire app in `src/main.tsx`:
+
+```tsx
+<ErrorBoundary>
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+</ErrorBoundary>
+```
+
+- Catches unhandled render errors and displays a styled fallback ("Something went wrong") instead of a blank screen.
+- In development (`import.meta.env.DEV`), shows the raw error message for easier debugging.
+- Accepts an optional `fallback` prop for per-subtree customisation.
 
 ---
 
@@ -280,6 +339,12 @@ npm install
 npm run dev
 # Dev server: http://localhost:3000
 # /api requests proxied → http://localhost:5002
+```
+
+### Environment variables (optional)
+
+```env
+VITE_API_BASE_URL=/api   # override the axios base URL (defaults to /api via Vite proxy)
 ```
 
 ### Lint
@@ -302,6 +367,7 @@ npm run preview # Preview the production build locally
 ```ts
 type Role = 'JOB_SEEKER' | 'RECRUITER' | 'ADMIN';
 type ApplicationStatus = 'submitted' | 'shortlisted' | 'under_review' | 'rejected';
+type QueueJobStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed' | 'paused';
 
 interface User {
   id: string; name: string; email: string;
@@ -338,6 +404,19 @@ interface Application {
   job?: { id: string; title: string; location: string;
           salaryRange?: string; category?: string;
           recruiter?: { companyName: string } };
+}
+
+interface SavedJob {        // NEW
+  id: string; jobId: string; jobSeekerId: string; savedAt: string;
+  job?: { id: string; title: string; location: string;
+          salaryRange?: string; category?: string; isActive: boolean;
+          recruiter?: { companyName: string } };
+}
+
+interface QueueJobResponse {  // NEW
+  id: string | number; type: string; status: QueueJobStatus;
+  attemptsMade: number; createdAt: string;
+  result?: unknown; failedReason?: string;
 }
 ```
 

@@ -23,8 +23,8 @@ export const logout = async (): Promise<void> => {
 };
 
 export const getMe = async (signal?: AbortSignal): Promise<User> => {
-  const res = await axiosClient.get<{ user: User }>('/auth/me', { signal });
-  return res.data.user;
+  const res = await axiosClient.get<{ data: User }>('/auth/me', { signal });
+  return res.data.data;
 };
 
 export const refreshToken = async (): Promise<void> => {

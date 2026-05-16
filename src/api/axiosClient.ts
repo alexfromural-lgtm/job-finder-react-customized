@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
   withCredentials: true, // sends both accessToken + refreshToken cookies automatically
+  timeout: 10_000, // 10 seconds — prevents requests hanging indefinitely
   headers: {
     'Content-Type': 'application/json',
   },

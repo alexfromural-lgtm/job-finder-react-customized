@@ -46,7 +46,7 @@ export default function ApplyModal({ jobId, jobTitle, companyName, onSuccess, on
     setErrorMsg('');
     try {
       // Step 1: enqueue the write — backend returns 202 immediately
-      const { jobId: queueJobId } = await applyToJob(jobId, coverLetter.trim() || undefined);
+      const { queueJobId } = await applyToJob(jobId, coverLetter.trim() || undefined);
       setSuccessMsg('⏳ Processing your application…');
 
       // Step 2: poll until the worker finishes the DB write

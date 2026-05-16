@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 
@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import JobDetailPage from './pages/JobDetailPage';
+import NotFoundPage from './pages/NotFoundPage';
 import JobSeekerDashboard from './pages/jobseeker/DashboardPage';
 import RecruiterDashboard from './pages/recruiter/DashboardPage';
 import RecruiterProfilePage from './pages/recruiter/ProfilePage';
@@ -73,8 +74,8 @@ function App() {
           }
         />
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Catch-all — proper 404 page */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

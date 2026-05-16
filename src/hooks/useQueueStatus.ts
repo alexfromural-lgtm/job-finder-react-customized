@@ -39,8 +39,7 @@ export function useQueueStatus(queueJobId: string | null) {
 
     const poll = async () => {
       try {
-        const res = await axiosClient.get<QueueJobResponse>(`/queue/job/${queueJobId}`);
-        const data = res.data;
+        const { data } = await axiosClient.get<QueueJobResponse>(`/queue/job/${queueJobId}`);
         setStatus(data.status);
 
         if (data.status === STATUS_COMPLETED) {

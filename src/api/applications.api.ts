@@ -21,11 +21,11 @@ export const applyToJob = async (
   jobId: string,
   coverLetter?: string,
 ): Promise<QueuedResponse> => {
-  const res = await axiosClient.post<{ data: QueuedResponse }>(
+  const { data } = await axiosClient.post<QueuedResponse>(
     `/jobseeker/apply/${jobId}`,
     { coverLetter },
   );
-  return res.data.data;
+  return data;
 };
 
 // ─── Save / Unsave Job (save is queued — returns 202) ────────────────────────
@@ -37,8 +37,8 @@ export const applyToJob = async (
  * Use pollUntilDone() from queue.api.ts to confirm the save completed.
  */
 export const saveJob = async (jobId: string): Promise<QueuedResponse> => {
-  const res = await axiosClient.post<{ data: QueuedResponse }>(`/jobseeker/saved/${jobId}`);
-  return res.data.data;
+  const { data } = await axiosClient.post<QueuedResponse>(`/jobseeker/saved/${jobId}`);
+  return data;
 };
 
 export const unsaveJob = async (jobId: string): Promise<void> => {
@@ -48,8 +48,8 @@ export const unsaveJob = async (jobId: string): Promise<void> => {
 // ─── My Applications (synchronous reads) ─────────────────────────────────────
 
 export const getMyApplications = async (signal?: AbortSignal): Promise<Application[]> => {
-  const res = await axiosClient.get<{ data: Application[] }>('/jobseeker/applications', { signal });
-  return res.data.data;
+  const { data: { applications } } = await axiosClient.get<{ applications: Application[] }>('/jobseeker/applications', { signal });
+  return applications;
 };
 
 export const withdrawApplication = async (applicationId: string): Promise<void> => {

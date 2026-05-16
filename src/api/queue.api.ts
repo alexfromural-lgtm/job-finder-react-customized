@@ -22,8 +22,8 @@ export const getQueueJobStatus = async (
   jobId: string | number,
   signal?: AbortSignal,
 ): Promise<QueueJobResult> => {
-  const res = await axiosClient.get<QueueJobResult>(`/queue/job/${jobId}`, { signal });
-  return res.data;
+  const { data } = await axiosClient.get<QueueJobResult>(`/queue/job/${jobId}`, { signal });
+  return data;
 };
 
 // ─── Polling helper ───────────────────────────────────────────────────────────

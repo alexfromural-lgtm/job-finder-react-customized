@@ -189,7 +189,7 @@ It prefers the structured `{ "error": "…" }` field returned by the backend, th
 | `GET`  | `/jobseeker/profile` | `JOB_SEEKER` | Get job seeker profile |
 | `PATCH` | `/jobseeker/profile` | `JOB_SEEKER` | Update job seeker profile |
 
-All profile responses now use the `{ data: … }` envelope — `profile.api.ts` reads `res.data.data`.
+All profile responses now use the `{ data: … }` envelope — `profile.api.ts` reads `res.data`.
 
 ### Applications
 

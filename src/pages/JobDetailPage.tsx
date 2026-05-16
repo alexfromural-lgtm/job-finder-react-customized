@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, hasRole } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,7 +53,7 @@ export default function JobDetailPage() {
     setShowModal(false);
   }, []);
 
-  if (loading) {
+  if (loading || isAuthLoading) {
     return (
       <div className="spinner-page page">
         <div className="spinner" style={{ width: 40, height: 40 }} />

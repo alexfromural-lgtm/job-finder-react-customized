@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import { useState } from 'react';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout, hasRole } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, hasRole } = useAuth();
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -63,7 +63,10 @@ export default function Navbar() {
               </NavLink>
             )}
 
-            {isAuthenticated ? (
+            {isLoading ? (
+              // Placeholder keeps the navbar height stable while session resolves
+              <div style={{ width: 120, height: 32 }} />
+            ) : isAuthenticated ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '0.5rem' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                   👤 {user?.name}

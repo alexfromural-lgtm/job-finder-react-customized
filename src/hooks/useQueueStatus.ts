@@ -3,7 +3,9 @@ import axiosClient from '../api/axiosClient';
 import type { QueueJobResponse, QueueJobStatus } from '../types';
 
 const POLL_INTERVAL_MS = 1500;
-const TERMINAL_STATES: QueueJobStatus[] = ['completed', 'failed'];
+const STATUS_COMPLETED: QueueJobStatus = 'completed';
+const STATUS_FAILED: QueueJobStatus = 'failed';
+const TERMINAL_STATES: QueueJobStatus[] = [STATUS_COMPLETED, STATUS_FAILED];
 
 /**
  * Polls the queue status endpoint until the job reaches a terminal state
@@ -41,11 +43,11 @@ export function useQueueStatus(queueJobId: string | null) {
         const data = res.data;
         setStatus(data.status);
 
-        if (data.status === 'completed') {
+        if (data.status === STATUS_COMPLETED) {
           setResult(data.result ?? null);
           clearPolling();
           setIsLoading(false);
-        } else if (data.status === 'failed') {
+        } else if (data.status === STATUS_FAILED) {
           setError(data.failedReason ?? 'Operation failed. Please try again.');
           clearPolling();
           setIsLoading(false);

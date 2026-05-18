@@ -1,5 +1,5 @@
 import axiosClient from './axiosClient';
-import type { Application } from '../types';
+import type { Application, SavedJob } from '../types';
 
 // ─── Queued response shape (202 Accepted) ─────────────────────────────────────
 
@@ -26,6 +26,13 @@ export const applyToJob = async (
     { coverLetter },
   );
   return data;
+};
+
+// ─── Saved Jobs (reads) ───────────────────────────────────────────────────────
+
+export const getSavedJobs = async (signal?: AbortSignal): Promise<SavedJob[]> => {
+  const { data: { savedJobs } } = await axiosClient.get<{ savedJobs: SavedJob[] }>('/jobseeker/saved', { signal });
+  return savedJobs;
 };
 
 // ─── Save / Unsave Job (save is queued — returns 202) ────────────────────────

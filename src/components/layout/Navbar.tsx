@@ -46,6 +46,12 @@ export default function Navbar() {
             )}
 
             {isAuthenticated && hasRole('JOB_SEEKER') && (
+              <NavLink to="/dashboard/seeker/saved" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                Saved Jobs
+              </NavLink>
+            )}
+
+            {isAuthenticated && hasRole('JOB_SEEKER') && (
               <NavLink to="/profile/seeker" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 My Profile
               </NavLink>

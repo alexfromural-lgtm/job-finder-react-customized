@@ -8,7 +8,11 @@ interface JobDetailHeaderProps {
   isJobSeeker: boolean;
   checkingApplication: boolean;
   applicationId: string | null;
+  isSaved: boolean;
+  savingJob: boolean;
+  saveError: string;
   onApplyClick: () => void;
+  onSaveClick: () => void;
 }
 
 export default function JobDetailHeader({
@@ -17,7 +21,11 @@ export default function JobDetailHeader({
   isJobSeeker,
   checkingApplication,
   applicationId,
+  isSaved,
+  savingJob,
+  saveError,
   onApplyClick,
+  onSaveClick,
 }: JobDetailHeaderProps) {
   return (
     <div
@@ -56,10 +64,19 @@ export default function JobDetailHeader({
             isJobSeeker={isJobSeeker}
             checkingApplication={checkingApplication}
             applicationId={applicationId}
+            isSaved={isSaved}
+            savingJob={savingJob}
             onApplyClick={onApplyClick}
+            onSaveClick={onSaveClick}
           />
+          {saveError && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--color-error, #f87171)', textAlign: 'right', maxWidth: 220 }}>
+              ⚠ {saveError}
+            </p>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

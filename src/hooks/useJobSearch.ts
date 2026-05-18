@@ -4,6 +4,7 @@ import type { Job } from '../types';
 import * as JobsApi from '../api/jobs.api';
 import type { JobsMeta } from '../api/jobs.api';
 import { PAGE_SIZES } from './usePagination';
+import { useDebounce } from './useDebounce';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -37,7 +38,7 @@ export function useJobSearch(): UseJobSearchResult {
 
   // ── Filter / pagination state (restored from URL on mount) ─────────────────
   const [search, setSearchRaw] = useState(() => searchParams.get('search') ?? '');
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const debouncedSearch = useDebounce(search, 300);
   const [categoryFilter, setCategoryFilterRaw] = useState(() => searchParams.get('category') ?? '');
   const [page, setPage] = useState(() => Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1));
   const [pageSize, setPageSizeRaw] = useState(() => {
@@ -54,12 +55,6 @@ export function useJobSearch(): UseJobSearchResult {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
-
-  // ── Debounce search input (300 ms) ─────────────────────────────────────────
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(t);
-  }, [search]);
 
   // ── Reset to page 1 whenever filters / page-size change ───────────────────
   const isFirstRender = useRef(true);
